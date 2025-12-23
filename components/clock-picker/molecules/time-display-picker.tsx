@@ -3,24 +3,20 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
-import { Platform, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { selectSong } from '../services';
+import { Platform, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
-type ClockPickerProps = {
+type TimeDisplayPickerProps = {
+  initialTime?: Date;
   onTimeChange?: (time: Date) => void;
 };
 
-export function ClockPicker({ onTimeChange }: ClockPickerProps) {
-  const [selectedTime, setSelectedTime] = useState(new Date());
+export function TimeDisplayPicker({ initialTime, onTimeChange }: TimeDisplayPickerProps) {
+  const [selectedTime, setSelectedTime] = useState(initialTime || new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [is24Hour, setIs24Hour] = useState(false);
-  const [songInput, setSongInput] = useState('');
-  const [selectedSong, setSelectedSong] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const isDark = colorScheme === 'dark';
   const tintColor = useThemeColor({}, 'tint');
 
   const handleTimeChange = (event: any, date?: Date) => {
@@ -50,34 +46,11 @@ export function ClockPicker({ onTimeChange }: ClockPickerProps) {
     setShowPicker(true);
   };
 
-  const handleSongConfirm = async () => {
-    if (!songInput.trim()) {
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const result = await selectSong(songInput);
-      if (result.success && result.songName) {
-        setSelectedSong(result.songName);
-        setSongInput('');
-      } else {
-        console.error('Song selection failed:', result.error);
-        // TODO: Show error message to user
-      }
-    } catch (error) {
-      console.error('Error selecting song:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <View style={styles.container}>
       {/* Large Time Display */}
       <View style={styles.timeDisplayContainer}>
-        <Text 
-          style={[styles.timeDisplay, { color: tintColor }]}>
+        <Text style={[styles.timeDisplay, { color: tintColor }]}>
           {formatTime(selectedTime, is24Hour)}
         </Text>
       </View>
@@ -86,15 +59,15 @@ export function ClockPicker({ onTimeChange }: ClockPickerProps) {
       <TouchableOpacity
         style={[
           styles.timePickerButton,
-          { 
-            backgroundColor: tintColor + '20', 
+          {
+            backgroundColor: tintColor + '20',
             borderColor: tintColor,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.25,
             shadowRadius: 3.84,
             elevation: 5,
-          }
+          },
         ]}
         onPress={openPicker}
         activeOpacity={0.7}>
@@ -117,49 +90,6 @@ export function ClockPicker({ onTimeChange }: ClockPickerProps) {
         <Text style={[styles.formatToggleText, styles.formatToggleTextRight, { color: colors.text }]}>
           24 Hour
         </Text>
-      </View>
-
-      {/* Song Selection Section */}
-      <View style={styles.songSection}>
-        <Text style={[styles.songSectionTitle, { color: colors.text }]}>
-          Select Song
-        </Text>
-        
-        {selectedSong && (
-          <View style={[styles.selectedSongContainer, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
-            <Text style={[styles.selectedSongLabel, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>Selected:</Text>
-            <Text style={[styles.selectedSongText, { color: colors.text }]}>
-              {selectedSong}
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.songInputContainer}>
-          <TextInput
-            style={[
-              styles.songInput,
-              {
-                backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-                color: colors.text,
-                borderColor: isDark ? '#374151' : '#D1D5DB',
-              }
-            ]}
-            placeholder="Enter song name..."
-            placeholderTextColor="#9CA3AF"
-            value={songInput}
-            onChangeText={setSongInput}
-            onSubmitEditing={handleSongConfirm}
-            editable={!isLoading}
-          />
-          <TouchableOpacity
-            style={[styles.confirmButton, { backgroundColor: tintColor }]}
-            onPress={handleSongConfirm}
-            disabled={isLoading || !songInput.trim()}>
-            <Text style={styles.confirmButtonText}>
-              {isLoading ? '...' : 'Confirm'}
-            </Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* Date Time Picker */}
@@ -189,10 +119,9 @@ export function ClockPicker({ onTimeChange }: ClockPickerProps) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    marginBottom: 24,
   },
   timeDisplayContainer: {
     width: '100%',
@@ -238,51 +167,6 @@ const styles = StyleSheet.create({
   formatToggleTextRight: {
     marginLeft: 16,
   },
-  songSection: {
-    width: '100%',
-    maxWidth: 300,
-    marginTop: 16,
-  },
-  songSectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  selectedSongContainer: {
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  selectedSongLabel: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  selectedSongText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  songInputContainer: {
-    flexDirection: 'row',
-  },
-  songInput: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    marginRight: 8,
-  },
-  confirmButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
   pickerContainer: {
     width: '100%',
     maxWidth: 300,
@@ -301,4 +185,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
